@@ -54,6 +54,6 @@ def predict_mask_point(sam_predictor, img, point, binary):
 
     # get the mask
     image_mask = masks[0][0].cpu().numpy()
-    image_mask = cv2.convertScaleAbs(image_mask*255).astype(np.uint8)
+    image_mask = (image_mask*255).astype(np.uint8)
 
     return image_mask
