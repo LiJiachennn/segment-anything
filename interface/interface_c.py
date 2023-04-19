@@ -20,17 +20,17 @@ def torch_version():
 
 def load_sam_model():
     # load trained model
-    sam_checkpoint = '/data/codes/segment-anything/models/sam_vit_h_4b8939.pth'
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    sam_predictor = SamPredictor(build_sam(checkpoint=sam_checkpoint).to(device))
+    # sam_checkpoint = '/data/codes/segment-anything/models/sam_vit_h_4b8939.pth'
+    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # sam_predictor = SamPredictor(build_sam(checkpoint=sam_checkpoint).to(device))
 
     # sam_checkpoint = '/data/codes/segment-anything/models/sam_vit_l_0b3195.pth'
     # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # sam_predictor = SamPredictor(build_sam_vit_l(checkpoint=sam_checkpoint).to(device))
 
-    # sam_checkpoint = '/data/codes/segment-anything/models/sam_vit_b_01ec64.pth'
-    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # sam_predictor = SamPredictor(build_sam_vit_b(checkpoint=sam_checkpoint).to(device))
+    sam_checkpoint = '/data/codes/segment-anything/models/sam_vit_b_01ec64.pth'
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    sam_predictor = SamPredictor(build_sam_vit_b(checkpoint=sam_checkpoint).to(device))
 
     print("load model done. model path: ", sam_checkpoint)
     return sam_predictor
@@ -100,6 +100,44 @@ def predict_mask_box(sam_predictor, img, box, binary):
     shape_1 = masks.shape[1]
     selectLayer = max(0, shape_1-2)
 
+    image_mask = masks[0][0].cpu().numpy()
+    image_mask = (image_mask*255).astype(np.uint8)
+
+    return image_mask
+
+def predict_mask_mask(sam_predictor, img, mask, binary):
+
+    # set image to sam
+    sam_predictor.set_image(img)
+
+    in_mask = torch.as_tensor(mask, device=sam_predictor.device)
+    in_mask = in_mask.to(torch.float)
+    # map [0, 1] --> (0, 1)
+    in_mask = in_mask / 256
+    in_mask = torch.logit(in_mask + 0.001)
+    in_mask = in_mask[None, :, :]
+
+    if binary == True:
+        masks, iou_preds, _ = sam_predictor.predict_torch(
+            point_coords=None,
+            point_labels=None,
+            boxes=None,
+            mask_input=in_mask,
+            multimask_output=True,
+            return_logits=False,
+        )
+    else:
+        masks, iou_preds, _ = sam_predictor.predict_torch(
+            point_coords=None,
+            point_labels=None,
+            boxes=None,
+            mask_input=in_mask,
+            multimask_output=True,
+            return_logits=True,
+        )
+        masks = torch.sigmoid(masks)
+
+    # get the mask
     image_mask = masks[0][0].cpu().numpy()
     image_mask = (image_mask*255).astype(np.uint8)
 

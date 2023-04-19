@@ -42,20 +42,21 @@ def main():
 
         binary = False
         if binary == True:
-            masks, iou_preds, _ = sam_predictor.predict_torch(
+            masks, iou_preds, lowres_masks = sam_predictor.predict_torch(
                 in_points[:, None, :],
                 in_labels[:, None],
                 multimask_output=True,
                 return_logits=False,
             )
         else:
-            masks, iou_preds, _ = sam_predictor.predict_torch(
+            masks, iou_preds, lowres_masks = sam_predictor.predict_torch(
                 in_points[:, None, :],
                 in_labels[:, None],
                 multimask_output=True,
                 return_logits=True,
             )
             masks = torch.sigmoid(masks)
+            lowres_masks = torch.sigmoid(lowres_masks)
 
     if use_box:
         box = np.array([270, 178, 270+148, 178+168])
@@ -86,7 +87,11 @@ def main():
     image_mask = masks[0][0].cpu().numpy()
     image_mask = (image_mask*255).astype(np.uint8)
 
+    image_lowres_masks = lowres_masks[0][0].cpu().numpy()
+    image_lowres_masks = (image_lowres_masks * 255).astype(np.uint8)
+
     cv2.imshow("image_mask", image_mask);
+    cv2.imshow("image_lowres_mask", image_lowres_masks);
     cv2.waitKey(0)
 
 
