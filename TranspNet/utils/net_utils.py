@@ -22,19 +22,21 @@ def save_model(net, optimizer, epoch, model_dir):
     }, os.path.join(model_dir, '{:04d}.pth'.format(epoch)))
 
 
-def save_log(epoch, loss_, loss_P_map_, lr_, train_, log_dir):
+def save_log(epoch, loss, loss_mask, loss_depth, lr, train, log_dir):
     log_file = open(log_dir, 'a')
 
-    if train_== True:
+    if train== True:
         log_file.write("epoch: {:04d}\t".format(epoch))
         log_file.write("\n")
-        log_file.write("train loss: {:.6f}\t".format(loss_))
-        log_file.write("train P_map loss: {:.6f}\t".format(loss_P_map_))
-        log_file.write("lr: {:.6f}\t".format(lr_))
+        log_file.write("train loss: {:.6f}\t".format(loss))
+        log_file.write("train mask loss: {:.6f}\t".format(loss_mask))
+        log_file.write("train depth loss: {:.6f}\t".format(loss_depth))
+        log_file.write("lr: {:.6f}\t".format(lr))
         log_file.write("\n")
     else:
-        log_file.write("valid loss: {:.6f}\t".format(loss_))
-        log_file.write("valid P_map loss: {:.6f}\t".format(loss_P_map_))
+        log_file.write("valid loss: {:.6f}\t".format(loss))
+        log_file.write("train mask loss: {:.6f}\t".format(loss_mask))
+        log_file.write("train depth loss: {:.6f}\t".format(loss_depth))
         log_file.write("\n")
         log_file.write("\n")
     log_file.close()

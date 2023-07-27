@@ -37,7 +37,7 @@ class TOD_Dataset(torch.utils.data.Dataset):
         # set textures for train and test split
         if self.train == True:
             # self.textures = [0, 1, 2, 3, 4, 6, 7, 8, 9]
-            self.textures = [0]
+            self.textures = [5]
         if self.train == False:
             self.textures = [5]
 

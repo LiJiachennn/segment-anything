@@ -12,7 +12,7 @@ from TranspNet.networks.TransNet import train_net
 def main():
 
     cur_date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    cur_date = "2023-07-26 16:00:00"
+    # cur_date = "2023-07-26 16:00:00"
 
     train_net(cur_date)
     # test_net(obj_cur, cur_date)
