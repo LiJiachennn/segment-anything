@@ -92,17 +92,15 @@ class TOD_Dataset(torch.utils.data.Dataset):
         depth = cv2.imread(self.depth_files[index], cv2.IMREAD_UNCHANGED)
 
         # from [0,255] to [0.0, 1.0]
-        img = self.normalize_img(img)
         mask = self.normalize_img(mask)
 
         # fill the image and resize to [256, 256]
         bottom = self.img_w - self.img_h
-        img_border = cv2.copyMakeBorder(img, 0, bottom, 0, 0, cv2.BORDER_CONSTANT, value=(0,0,0))
         mask_border = cv2.copyMakeBorder(mask, 0, bottom, 0, 0, cv2.BORDER_CONSTANT, value=(0))
         depth_border = cv2.copyMakeBorder(depth, 0, bottom, 0, 0, cv2.BORDER_CONSTANT, value=(0))
 
-        lowres_size = (256,256)
-        img_lowres = cv2.resize(img_border, lowres_size, interpolation=cv2.INTER_LINEAR)
+        lowres_size = (1024, 1024)
+        img_lowres = cv2.resize(img, (1024, 576), interpolation=cv2.INTER_LINEAR)
         mask_lowres = cv2.resize(mask_border, lowres_size, interpolation=cv2.INTER_LINEAR)
         depth_lowres = cv2.resize(depth_border, lowres_size, interpolation=cv2.INTER_NEAREST)
 

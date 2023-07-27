@@ -89,6 +89,20 @@ class SamPredictor:
         self.features = self.model.image_encoder(input_image)
         self.is_image_set = True
 
+    @torch.no_grad()
+    def extract_image_feature(self, image):
+        self.reset_image()
+
+        self.original_size = tuple((image.shape[2], image.shape[3]))
+        self.input_size = tuple((image.shape[3], image.shape[3]))
+
+        input_image = self.model.preprocess(image)
+        self.features = self.model.image_encoder(input_image)
+        self.is_image_set = True
+
+        return self.features
+
+
     def predict(
         self,
         point_coords: Optional[np.ndarray] = None,
