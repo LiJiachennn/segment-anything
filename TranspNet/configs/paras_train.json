@@ -1,0 +1,13 @@
+{
+  "model name": "Transp-Net",
+  "tod path": "/data/codes/google-research_master_keypose_/keypose/data/",
+  "tod externel path": "/data/DATASETS/TOD_reformat/",
+  "TransNet save path": "/data/RESULTS/TOD/TransNet/",
+
+  "epochs":30,
+  "batch_size":16,
+
+  "lr":0.001,
+  "lr_decay_rate":0.5,
+  "lr_decay_epoch":20
+}

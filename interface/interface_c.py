@@ -142,3 +142,40 @@ def predict_mask_mask(sam_predictor, img, mask, binary):
     image_mask = (image_mask*255).astype(np.uint8)
 
     return image_mask
+
+def predict_mask_pointbox(sam_predictor, img, point, label, box, binary):
+
+    # set image to sam
+    sam_predictor.set_image(img)
+
+    transformed_point = sam_predictor.transform.apply_coords(point, img.shape[:2])
+    in_points = torch.as_tensor(transformed_point, device=sam_predictor.device)
+    in_labels = torch.as_tensor(label, device=in_points.device)
+
+    box = np.tile(box, (label.shape[0], 1))
+    transformed_box = sam_predictor.transform.apply_boxes(box, img.shape[:2])
+    in_box = torch.as_tensor(transformed_box, device=sam_predictor.device)
+
+    if binary == True:
+        masks, iou_preds, _ = sam_predictor.predict_torch(
+            point_coords=in_points[:, None, :],
+            point_labels=in_labels[:, None],
+            boxes=in_box,
+            multimask_output=True,
+            return_logits=False,
+        )
+    else:
+        masks, iou_preds, _ = sam_predictor.predict_torch(
+            point_coords=in_points[:, None, :],
+            point_labels=in_labels[:, None],
+            boxes=in_box,
+            multimask_output=True,
+            return_logits=True,
+        )
+        masks = torch.sigmoid(masks)
+
+    # get the mask
+    image_mask = masks[0][0].cpu().numpy()
+    image_mask = (image_mask*255).astype(np.uint8)
+
+    return image_mask
