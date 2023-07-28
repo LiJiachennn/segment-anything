@@ -4,7 +4,7 @@
   "tod externel path": "/data/DATASETS/TOD_reformat/",
   "TransNet save path": "/data/RESULTS/TOD/TransNet/",
 
-  "epochs":4,
+  "epochs":5,
   "batch_size":2,
 
   "lr":0.001,
@@ -15,5 +15,5 @@
   "loss_depth_weight":1.0,
 
   "save_model":1,
-  "save_epoch_step":2
+  "save_epoch_step":5
 }

@@ -100,7 +100,7 @@ def train(net, train_loader, optimizer, losses, losses_weights, epoch, log_save_
         mask_pred, depth_pred = net.forward(imgs)
 
         loss_mask = losses[0](mask_pred, masks)
-        loss_depth = losses[1](depth_pred * masks[:, 0:1, :, :], depths * masks[:, 0:1, :, :])
+        loss_depth = losses[1](depth_pred, depths)
 
         loss = losses_weights[0] * loss_mask + losses_weights[1] * loss_depth
         loss.backward()
@@ -179,12 +179,12 @@ def train_net(cur_date):
 
     # set detas
     print("load train data.")
-    train_datas = TOD_Dataset(train=True)
+    train_datas = TOD_Dataset(train=True, valid=False, test=False)
     print("load valid data.")
-    valid_datas = TOD_Dataset(train=False)
+    valid_datas = TOD_Dataset(train=False, valid=True, test=False)
 
     train_loader = DataLoader(dataset=train_datas, batch_size=batch_size, shuffle=True)
-    valid_loader = DataLoader(dataset=valid_datas, batch_size=1, shuffle=True)
+    valid_loader = DataLoader(dataset=valid_datas, batch_size=1, shuffle=False)
 
     # training...
     for epoch in range(epochs):
@@ -197,12 +197,82 @@ def train_net(cur_date):
             save_model(net, optimizer, epoch, model_save_dir)
 
 
-def test_net(obj_cur, cur_date):
+def test_net(cur_date):
 
     # dataset root_path
     root_path = configs['tod path']
 
+    # load trained model
+    gpu_num = torch.cuda.device_count()
+    net = TransNet()
+    net = nn.DataParallel(net, list(range(gpu_num))).cuda()
 
+    save_dir = configs['TransNet save path'] + cur_date + '/'
+    model_save_dir = save_dir + '0024.pth'
+    state_dict_load = torch.load(model_save_dir)
+    net.load_state_dict(state_dict_load['net'])
+    net.eval()
 
+    # the seq of TOD dataset
+    # model_name = ['mug_0', 'mug_1', 'mug_2', 'mug_3', 'mug_4', 'mug_5', 'mug_6']
+    # texture_name = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    # seq_name = [0, 1, 2, 3]
+    model_name = ['mug_0']
+    texture_name = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    seq_name = [3]
 
+    for m in range(len(model_name)):
+        model = model_name[m]
+        texture = texture_name[5]
+        for s in range(len(seq_name)):
+            seq = seq_name[s]
+            texture_seq = 'texture_' + str(texture) + '_pose_' + str(seq)
+            print(model, texture_seq)
+
+            # load data
+            print("load test data.")
+            test_datas = TOD_Dataset(train=False, valid=False, test=True,
+                                     test_model=model,
+                                     test_texture=texture,
+                                     test_pose_seq=seq)
+            test_loader = DataLoader(dataset=test_datas, batch_size=1, shuffle=False)
+
+            # save path of the pred mask and depth
+            pred_maps_save_dir = save_dir + model + "/"
+            if os.path.exists(pred_maps_save_dir) == False:
+                os.mkdir(pred_maps_save_dir)
+            pred_maps_save_dir = pred_maps_save_dir + texture_seq + "/"
+            if os.path.exists(pred_maps_save_dir) == False:
+                os.mkdir(pred_maps_save_dir)
+
+            # loop
+            for iter, data in tqdm(enumerate(test_loader)):
+                imgs, _, _ = [d.cuda() for d in data]
+
+                # pred mask and depth
+                mask_pred_, depth_pred_ = net.forward(imgs)
+
+                mask_pred = mask_pred_.detach().cpu().numpy()[0]
+                mask_pred = mask_pred.reshape(mask_pred.shape[0], mask_pred.shape[1],
+                                              mask_pred.shape[2]).swapaxes(0, 2).swapaxes(0, 1)
+                mask_pred = mask_pred[:, :, 0]
+
+                depth_pred = depth_pred_.detach().cpu().numpy()[0]
+                depth_pred = depth_pred.reshape(depth_pred.shape[0], depth_pred.shape[1],
+                                                depth_pred.shape[2]).swapaxes(0, 2).swapaxes(0, 1)
+                depth_pred = depth_pred[:, :, 0]
+
+                # convert roi to origin image
+                mask_pred = (mask_pred * 255).astype(np.uint8)
+                mask_pred = mask_pred[0:576][:]
+                mask_pred = cv2.resize(mask_pred, (1280, 720), interpolation=cv2.INTER_LINEAR)
+
+                depth_pred = (depth_pred * 1000).astype(np.uint16)
+                depth_pred = depth_pred[0:576][:]
+                depth_pred = cv2.resize(depth_pred, (1280, 720), interpolation=cv2.INTER_NEAREST)
+
+                mask_pred_save_path = pred_maps_save_dir + str(iter).zfill(6) + "_pred_mask.png"
+                cv2.imwrite(mask_pred_save_path, mask_pred)
+                depth_pred_save_path = pred_maps_save_dir + str(iter).zfill(6) + "_pred_depth.png"
+                cv2.imwrite(depth_pred_save_path, depth_pred)
 

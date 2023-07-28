@@ -13,9 +13,12 @@ with open(configs_file_path, 'r') as f:
 
 class TOD_Dataset(torch.utils.data.Dataset):
 
-    def __init__(self, train=True):
+    def __init__(self, train=True, valid=False, test=False,
+                 test_model = None,
+                 test_texture = None,
+                 test_pose_seq = None):
         """
-        :param test: for train or test, when training the network
+        :param train, valid test: only one can be True
         """
         super(TOD_Dataset, self).__init__()
 
@@ -27,19 +30,25 @@ class TOD_Dataset(torch.utils.data.Dataset):
         self.tod_path = configs['tod path']
         self.tod_externel_path = configs['tod externel path']
         self.train = train
+        self.valid = valid
+        self.test = test
 
-        # set models
-        # self.model_name = ['mug_0', 'mug_1', 'mug_2', 'mug_3', 'mug_4', 'mug_5', 'mug_6']   # only test on mug model
-        # self.test_texture = 5                                                               # same as the keypose method
-        self.model_name = ['mug_0']   # only test on mug model
-        self.test_texture = 5                                                               # same as the keypose method
-
-        # set textures for train and test split
+        # set textures
         if self.train == True:
-            # self.textures = [0, 1, 2, 3, 4, 6, 7, 8, 9]
+            self.model_name = ['mug_0', 'mug_1', 'mug_2', 'mug_3', 'mug_4', 'mug_5', 'mug_6']
+            self.textures = [0, 1, 2, 3, 4, 6, 7, 8, 9]
+            self.pose_seqs = [0, 1, 2, 3]
+            # self.model_name = ['mug_0']
+            # self.textures = [5]
+            # self.pose_seqs = [0, 1, 2]
+        if self.valid == True:
+            self.model_name = ['mug_0']
             self.textures = [5]
-        if self.train == False:
-            self.textures = [5]
+            self.pose_seqs = [0]
+        if self.test == True:
+            self.model_name = [test_model]
+            self.textures = [test_texture]
+            self.pose_seqs = [test_pose_seq]
 
         # declare some data paras
         self.img_files = np.array([])
@@ -49,9 +58,9 @@ class TOD_Dataset(torch.utils.data.Dataset):
         # loop the seqs
         for m in range(len(self.model_name)):
             for t in range(len(self.textures)):
-                for p in range(4):
-                    image_dir = self.tod_path + self.model_name[m] + "/texture_" + str(t) + "_pose_" + str(p) + "/"
-                    image_externel_dir = self.tod_externel_path + self.model_name[m] + "/texture_" + str(t) + "_pose_" + str(p) + "/"
+                for p in range(len(self.pose_seqs)):
+                    image_dir = self.tod_path + self.model_name[m] + "/texture_" + str(self.textures[t]) + "_pose_" + str(self.pose_seqs[p]) + "/"
+                    image_externel_dir = self.tod_externel_path + self.model_name[m] + "/texture_" + str(self.textures[t]) + "_pose_" + str(self.pose_seqs[p]) + "/"
                     if not os.path.exists(image_dir):
                         continue
 
@@ -94,7 +103,7 @@ class TOD_Dataset(torch.utils.data.Dataset):
         # from [0,255] to [0.0, 1.0]
         mask = self.normalize_img(mask)
 
-        # fill the image and resize to [256, 256]
+        # fill the image and resize to [1024, 1024]
         bottom = self.img_w - self.img_h
         mask_border = cv2.copyMakeBorder(mask, 0, bottom, 0, 0, cv2.BORDER_CONSTANT, value=(0))
         depth_border = cv2.copyMakeBorder(depth, 0, bottom, 0, 0, cv2.BORDER_CONSTANT, value=(0))
@@ -114,6 +123,7 @@ class TOD_Dataset(torch.utils.data.Dataset):
         mask_lowres = torch.tensor(mask_lowres.astype(np.float32)).permute(2, 0, 1)
         depth_lowres = np.expand_dims(depth_lowres, axis=2)
         depth_lowres = torch.tensor(depth_lowres.astype(np.float32)).permute(2, 0, 1)
+        depth_lowres = depth_lowres * 0.001     # to meter
 
         return img_lowres, mask_lowres, depth_lowres
 

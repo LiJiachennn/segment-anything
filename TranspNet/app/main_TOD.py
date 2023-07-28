@@ -6,16 +6,16 @@ import time
 import sys
 import os
 
-from TranspNet.networks.TransNet import train_net
+from TranspNet.networks.TransNet import train_net, test_net
 
 
 def main():
 
     cur_date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    # cur_date = "2023-07-26 16:00:00"
+    # cur_date = "2023-07-27 17:18:11"
 
     train_net(cur_date)
-    # test_net(obj_cur, cur_date)
+    # test_net(cur_date)
 
 
 if __name__ == '__main__':
