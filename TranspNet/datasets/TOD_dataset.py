@@ -81,8 +81,11 @@ class TOD_Dataset(torch.utils.data.Dataset):
                     # loop the current seq
                     for i in range(poses.shape[0]):
                         pose = poses[i]
-                        if pose[0][0] == 1.0 and pose[2][3] == 1.0:
-                            continue
+
+                        # only skip when train and valid
+                        if self.test == False:
+                            if pose[0][0] == 1.0 and pose[2][3] == 1.0:
+                                continue
 
                         self.img_files = np.append(self.img_files, filenames_img[i])
                         self.mask_files = np.append(self.mask_files, filenames_mask[i])

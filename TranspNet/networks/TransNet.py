@@ -197,7 +197,7 @@ def train_net(cur_date):
             save_model(net, optimizer, epoch, model_save_dir)
 
 
-def test_net(cur_date):
+def test_net(cur_date, trained_model_index):
 
     # dataset root_path
     root_path = configs['tod path']
@@ -208,18 +208,18 @@ def test_net(cur_date):
     net = nn.DataParallel(net, list(range(gpu_num))).cuda()
 
     save_dir = configs['TransNet save path'] + cur_date + '/'
-    model_save_dir = save_dir + '0024.pth'
+    model_save_dir = save_dir + trained_model_index + '.pth'
     state_dict_load = torch.load(model_save_dir)
     net.load_state_dict(state_dict_load['net'])
     net.eval()
 
     # the seq of TOD dataset
-    # model_name = ['mug_0', 'mug_1', 'mug_2', 'mug_3', 'mug_4', 'mug_5', 'mug_6']
-    # texture_name = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-    # seq_name = [0, 1, 2, 3]
-    model_name = ['mug_0']
+    model_name = ['mug_0', 'mug_1', 'mug_2', 'mug_3', 'mug_4', 'mug_5', 'mug_6']
     texture_name = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-    seq_name = [3]
+    seq_name = [0, 1, 2, 3]
+    # model_name = ['mug_0']
+    # texture_name = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    # seq_name = [3]
 
     for m in range(len(model_name)):
         model = model_name[m]
@@ -276,3 +276,6 @@ def test_net(cur_date):
                 depth_pred_save_path = pred_maps_save_dir + str(iter).zfill(6) + "_pred_depth.png"
                 cv2.imwrite(depth_pred_save_path, depth_pred)
 
+                cv2.imshow("mask_pred", mask_pred)
+                cv2.imshow("depth_pred", depth_pred*30)
+                cv2.waitKey(1)
