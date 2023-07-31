@@ -12,12 +12,12 @@ from TranspNet.networks.TransNet import train_net, test_net
 def main():
 
     cur_date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    # cur_date = "2023-07-28 15:59:37"
+    cur_date = "2023-07-31 10:00:00"
 
-    # train_net(cur_date)
+    train_net(cur_date)
 
-    trained_model_index = '0029'
-    test_net(cur_date, trained_model_index)
+    # trained_model_index = '0005'
+    # test_net(cur_date, trained_model_index)
 
 
 if __name__ == '__main__':

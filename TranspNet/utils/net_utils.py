@@ -1,5 +1,6 @@
 import os
 import torch
+import cv2
 import numpy as np
 
 def adjust_learning_rate(optimizer, epoch, lr_decay_rate, lr_decay_epoch, min_lr=1e-5):
@@ -55,5 +56,24 @@ def load_pose(path):
 
     return poses
 
+def convert_pred_img_to_origin(mask_pred_, depth_pred_):
+    mask_pred = mask_pred_.detach().cpu().numpy()[0]
+    mask_pred = mask_pred.reshape(mask_pred.shape[0], mask_pred.shape[1],
+                                  mask_pred.shape[2]).swapaxes(0, 2).swapaxes(0, 1)
+    mask_pred = mask_pred[:, :, 0]
 
+    depth_pred = depth_pred_.detach().cpu().numpy()[0]
+    depth_pred = depth_pred.reshape(depth_pred.shape[0], depth_pred.shape[1],
+                                    depth_pred.shape[2]).swapaxes(0, 2).swapaxes(0, 1)
+    depth_pred = depth_pred[:, :, 0]
 
+    # convert roi to origin image
+    mask_pred = (mask_pred * 255).astype(np.uint8)
+    mask_pred = mask_pred[0:576][:]
+    mask_pred = cv2.resize(mask_pred, (1280, 720), interpolation=cv2.INTER_LINEAR)
+
+    depth_pred = (depth_pred * 1000).astype(np.uint16)
+    depth_pred = depth_pred[0:576][:]
+    depth_pred = cv2.resize(depth_pred, (1280, 720), interpolation=cv2.INTER_NEAREST)
+
+    return mask_pred, depth_pred

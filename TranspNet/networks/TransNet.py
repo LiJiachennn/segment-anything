@@ -10,11 +10,10 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from TranspNet.datasets.TOD_dataset import TOD_Dataset
-from TranspNet.utils.net_utils import adjust_learning_rate, save_model, save_log
+from TranspNet.utils.net_utils import adjust_learning_rate, save_model, save_log, convert_pred_img_to_origin
 
 from segment_anything import build_sam, build_sam_vit_b, SamPredictor
 from segment_anything.modeling.common import LayerNorm2d
-from segment_anything.modeling.mask_decoder import MLP
 
 
 # set defaut configs
@@ -31,7 +30,12 @@ class TransNet(nn.Module):
         self.sam_predictor = sam_predictor
 
         # shared decoder
-        self.c0_upscaling = nn.Sequential(
+        self.common_conv = nn.Sequential(
+            nn.Conv2d(256, 256, 1, 1),
+            LayerNorm2d(256),
+            nn.GELU(),
+        )
+        self.common_upscaling = nn.Sequential(
             nn.ConvTranspose2d(256, 64, kernel_size=2, stride=2),
             LayerNorm2d(64),
             nn.GELU(),
@@ -71,14 +75,15 @@ class TransNet(nn.Module):
         feature = self.sam_predictor.extract_image_feature(x)
 
         # common branch
-        c0 = self.c0_upscaling(feature)
+        c0 = self.common_conv(feature)
+        c1 = self.common_upscaling(c0)
 
         # mask branch
-        c_mask = self.mask_convs_upscaling(c0)
+        c_mask = self.mask_convs_upscaling(c1)
         c_mask = torch.sigmoid(c_mask)
 
         # depth branch
-        c_depth = self.depth_convs_upscaling(c0)
+        c_depth = self.depth_convs_upscaling(c1)
 
         return c_mask, c_depth
 
@@ -110,6 +115,17 @@ def train(net, train_loader, optimizer, losses, losses_weights, epoch, log_save_
 
         # progress_bar.set_description(f"Batch {iter+1}/{len(train_loader)}")
         # progress_bar.update()
+
+    # save pred img
+    training_result_save_dir = '../result/' + 'training_show/'
+    if os.path.exists(training_result_save_dir) == False:
+        os.mkdir(training_result_save_dir)
+    mask_pred_, depth_pred_ = convert_pred_img_to_origin(mask_pred[0:1], depth_pred[0:1])
+
+    mask_pred_save_path = training_result_save_dir + str(epoch).zfill(6) + "_pred_mask.png"
+    cv2.imwrite(mask_pred_save_path, mask_pred_)
+    depth_pred_save_path = training_result_save_dir + str(epoch).zfill(6) + "_pred_depth.png"
+    cv2.imwrite(depth_pred_save_path, depth_pred_)
 
     # save log
     loss_ = loss.detach().cpu().numpy()
@@ -251,25 +267,7 @@ def test_net(cur_date, trained_model_index):
 
                 # pred mask and depth
                 mask_pred_, depth_pred_ = net.forward(imgs)
-
-                mask_pred = mask_pred_.detach().cpu().numpy()[0]
-                mask_pred = mask_pred.reshape(mask_pred.shape[0], mask_pred.shape[1],
-                                              mask_pred.shape[2]).swapaxes(0, 2).swapaxes(0, 1)
-                mask_pred = mask_pred[:, :, 0]
-
-                depth_pred = depth_pred_.detach().cpu().numpy()[0]
-                depth_pred = depth_pred.reshape(depth_pred.shape[0], depth_pred.shape[1],
-                                                depth_pred.shape[2]).swapaxes(0, 2).swapaxes(0, 1)
-                depth_pred = depth_pred[:, :, 0]
-
-                # convert roi to origin image
-                mask_pred = (mask_pred * 255).astype(np.uint8)
-                mask_pred = mask_pred[0:576][:]
-                mask_pred = cv2.resize(mask_pred, (1280, 720), interpolation=cv2.INTER_LINEAR)
-
-                depth_pred = (depth_pred * 1000).astype(np.uint16)
-                depth_pred = depth_pred[0:576][:]
-                depth_pred = cv2.resize(depth_pred, (1280, 720), interpolation=cv2.INTER_NEAREST)
+                mask_pred, depth_pred = convert_pred_img_to_origin(mask_pred_, depth_pred_)
 
                 mask_pred_save_path = pred_maps_save_dir + str(iter).zfill(6) + "_pred_mask.png"
                 cv2.imwrite(mask_pred_save_path, mask_pred)
