@@ -128,9 +128,10 @@ def train(net, train_loader, optimizer, losses, losses_weights, epoch, log_save_
     cv2.imwrite(depth_pred_save_path, depth_pred_)
 
     # save log
-    loss_ = loss.detach().cpu().numpy()
-    loss_mask_ = loss_mask.detach().cpu().numpy()
-    loss_depth_ = loss_depth.detach().cpu().numpy()
+    coef = (1024 * 1024) / (torch.sum(masks[:,0,:,:]).detach().cpu().numpy() / masks.shape[0])
+    loss_ = loss.detach().cpu().numpy() * coef
+    loss_mask_ = loss_mask.detach().cpu().numpy() * coef
+    loss_depth_ = loss_depth.detach().cpu().numpy() * coef
     lr_ = optimizer.state_dict()['param_groups'][0]['lr']
     train_ = True
     save_log(epoch, loss_, loss_mask_, loss_depth_, lr_, train_, log_save_dir)
@@ -148,12 +149,13 @@ def valid(net, valid_loader, optimizer, losses, losses_weights, log_save_dir):
         mask_pred, depth_pred = net.forward(imgs)
 
         loss_mask = losses[0](mask_pred, masks)
-        loss_depth = losses[1](depth_pred * masks[:, 0:1, :, :], depths * masks[:, 0:1, :, :])
+        loss_depth = losses[1](depth_pred, depths)
         loss = losses_weights[0] * loss_mask + losses_weights[1] * loss_depth
 
-        loss_mean = loss_mean + loss.detach().cpu().numpy() / (len(valid_loader))
-        loss_mask_mean = loss_mask_mean + loss_mask.detach().cpu().numpy() / (len(valid_loader))
-        loss_depth_mean = loss_depth_mean + loss_depth.detach().cpu().numpy() / (len(valid_loader))
+        coef = (1024 * 1024) / (torch.sum(masks[:,0,:,:]).detach().cpu().numpy() / masks.shape[0])
+        loss_mean = loss_mean + loss.detach().cpu().numpy() * coef / (len(valid_loader))
+        loss_mask_mean = loss_mask_mean + loss_mask.detach().cpu().numpy() * coef / (len(valid_loader))
+        loss_depth_mean = loss_depth_mean + loss_depth.detach().cpu().numpy() * coef / (len(valid_loader))
 
     save_log(0, loss_mean, loss_mask_mean, loss_depth_mean, 0, False, log_save_dir)
     print("||valid loss:", loss_mean, "||mask loss:", loss_mask_mean, "||depth loss:", loss_depth_mean)
