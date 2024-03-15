@@ -13,7 +13,52 @@ from scipy.special import expit
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-def main():
+def main_one_img():
+
+    # load image
+    imgPath = "/media/ljc/LJC/LJ.jpg"
+    img = cv2.imread(imgPath, 1);
+
+    sam_checkpoint = '../models/sam_vit_b_01ec64.pth'
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    sam_predictor = SamPredictor(build_sam_vit_b(checkpoint=sam_checkpoint).to(device))
+    print("load sam done.")
+
+    # set image to sam
+    sam_predictor.set_image(img)
+
+    # set box
+    pt1 = (520, 200)
+    pt2 = (620, 300)
+    img_rect = img.copy()
+    cv2.rectangle(img_rect, pt1, pt2, (0, 0, 255), 2)
+
+    # to sam
+    box = np.array([pt1[0], pt1[1], pt2[0], pt2[0]])
+    transformed_box = sam_predictor.transform.apply_boxes(box, img.shape[:2])
+    in_box = torch.as_tensor(transformed_box, device=sam_predictor.device)
+
+    binary = True
+    if binary == True:
+        masks, iou_preds, _ = sam_predictor.predict_torch(
+            point_coords=None,
+            point_labels=None,
+            boxes=in_box,
+            multimask_output=False,
+            return_logits=False,
+        )
+
+    shape_1 = masks.shape[1]
+    image_mask = masks[0][0].cpu().numpy()
+    image_mask = (image_mask * 255).astype(np.uint8)
+
+    cv2.imshow("img_rect", img_rect)
+    cv2.imshow("image_mask", image_mask)
+    cv2.imwrite('/media/ljc/LJC/LJ_mask.jpg', image_mask)
+    cv2.waitKey(0)
+
+
+def main_rbot():
 
     # load image
     imgPath = "/data/DATASETS/RBOT_dataset_2/ape/frames/a_regular0000.png"
@@ -96,4 +141,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main_one_img()
